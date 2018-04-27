@@ -1,0 +1,29 @@
+{
+    "require": {
+        "slim/slim": "^3.9",
+        "monolog/monolog": "^1.23",
+        "league/flysystem": "^1.0",
+        "illuminate/database": "^5.4",
+        "phpmailer/phpmailer": "^6.0",
+        "league/plates": "^3.3",
+        "naroga/redis-cache": "^1.1",
+        "facebook/webdriver": "^1.5",
+        "symfony/var-dumper": "^3.4",
+        "symfony/options-resolver": "^3.4",
+        "vectorface/whip": "^0.3.2"
+    },
+  "require-dev": {
+    "filp/whoops": "2.1.*"
+  },
+  "autoload": {
+      "psr-4": {
+          "App\\": "app/",
+          "Lib\\": "lib/"
+      },
+      "files": ["lib/helpers.php"]
+  },
+  "suggest": {
+  	"respect/validation": "1.1.*",
+    "jupitern/table": "1.*"
+  }
+}

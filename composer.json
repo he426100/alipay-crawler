@@ -1,0 +1,38 @@
+{
+  "name": "jupitern/slim3-skeleton",
+  "description": "Slim starter / Slim skeleton package to boost your development with Slim framework",
+  "keywords": [
+    "slim", "slim php", "Slim skeleton", "Slim starter", "skeleton", "starter", "php framework", "api", "cli"
+  ],
+  "license": "MIT",
+  "require": {
+    "php": ">= 7.0",
+    "slim/slim": "3.9.*",
+    "monolog/monolog": "1.23.*",
+    "league/flysystem": "1.0.*",
+    "illuminate/database": "5.5.*",
+    "phpmailer/phpmailer": "6.0.*",
+    "league/plates": "3.3.*",
+    "naroga/redis-cache": "1.1.*",
+    "nunomaduro/collision": "1.1.*",
+    "facebook/webdriver": "^1.5",
+    "symfony/var-dumper": "^4.0",
+    "symfony/options-resolver": "^4.0",
+    "vectorface/whip": "^0.3.2",
+    "symfony/process": "^4.0"
+  },
+  "require-dev": {
+    "filp/whoops": "2.1.*"
+  },
+  "autoload": {
+      "psr-4": {
+          "App\\": "app/",
+          "Lib\\": "lib/"
+      },
+      "files": ["lib/helpers.php"]
+  },
+  "suggest": {
+  	"respect/validation": "1.1.*",
+    "jupitern/table": "1.*"
+  }
+}
