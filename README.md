@@ -1,8 +1,6 @@
 # alipay-crawler
 
-标签： crawler
 
----
 1. 功能说明
 
 - 无限循环抓取首页收款记录
@@ -64,3 +62,4 @@ ENGINE=InnoDB
 - [最好的语言PHP + 最好的前端测试框架Selenium = 最好的爬虫（上）](http://qsalg.com/?p=474)
 - [用selenium+php-webdriver实现抓取淘宝页面](https://blog.minirplus.com/3829/)
 
+- [PHP Selenium使用教程](https://www.kancloud.cn/wangking/selenium/234398)
