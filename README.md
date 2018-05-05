@@ -3,27 +3,32 @@
 
 1. 功能说明
 
-- 无限循环抓取首页收款记录
-- 指定任意时间段查询支出记录
+- 无限循环抓取首页记录
+- 指定时间段抓取所有记录
 - 支持多个支付宝账号
 
 2. 使用方法
 
-- 无限循环爬取账务明细首页收入记录（可用于实现个人收款）
+- 无限循环爬取账务明细首页交易记录（可用于实现个人收款）
 ```cmd
-php cli.php alipay fetchHome
+php cli.php alipay fetchHome name="全部" tab="" acceptNames=""
 ```
 
-- 抓取指定任意时间段支出记录
+- 抓取指定任意时间段记录
 
 ```cmd
-php cli.php alipay fetchAllExpense start="2018-04-01 00:00:00" end="2018-04-26 23:59:59"
+php cli.php alipay fetchAll name="全部" start="2018-04-01 00:00:00" end="2018-04-26 23:59:59" tab="" acceptNames=""
+```
+
+- 查询支付宝订单号
+```cmd
+php cli.php alipay query tradeNo=2018xxx
 ```
 
 3. 说明
 
-- 本项目已实际投入使用，所以只公布核心代码
-- selenium-ide和katalon都可以录制，但是katalon录制出来后无法设置时间段，所以我是先分别用两个插件录制，然后再用selenium-ide的部分步骤替换katalon，再用katalon导出php代码
+- 本项目未经过严格测试，请谨慎用于生产环境
+- selenium-ide和katalon都可以录制，katalon录制出来后无法设置支付宝账务明细页面的时间段，我是先分别用两个插件录制，然后再用selenium-ide的部分步骤替换katalon，再用katalon导出php代码
 
 4. 数据库
 ```sql
