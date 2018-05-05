@@ -28,23 +28,23 @@ php cli.php alipay fetchAllExpense start="2018-04-01 00:00:00" end="2018-04-26 2
 4. 数据库
 ```sql
 CREATE TABLE `xx_alipay_order` (
-`id`  int(11) NOT NULL AUTO_INCREMENT ,
-`alipay_account`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '支付宝账号' ,
-`order_time`  int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '时间' ,
-`memo`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-`name`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-`trade_no`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
-`other`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '对方' ,
-`amount`  decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '金额' ,
-`detail`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '明细' ,
-`status`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '状态' ,
-`used`  tinyint(1) UNSIGNED NOT NULL DEFAULT 0 COMMENT '0 未使用 1已使用' ,
-`balance`  decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '账户余额' ,
-`outer_order_sn`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '商家订单号' ,
-`created_at`  datetime NOT NULL ,
-`updated_at`  datetime NOT NULL ,
-PRIMARY KEY (`id`),
-UNIQUE INDEX `trade_no` (`trade_no`) USING BTREE 
+    `id`  int(11) NOT NULL AUTO_INCREMENT ,
+    `alipay_account`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '支付宝账号' ,
+    `order_time`  int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '时间' ,
+    `memo`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+    `name`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+    `trade_no`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,
+    `other`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '对方' ,
+    `amount`  decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '金额' ,
+    `detail`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '明细' ,
+    `status`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '状态' ,
+    `used`  tinyint(1) UNSIGNED NOT NULL DEFAULT 0 COMMENT '0 未使用 1已使用' ,
+    `balance`  decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '账户余额' ,
+    `outer_order_sn`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '商家订单号' ,
+    `created_at`  datetime NOT NULL ,
+    `updated_at`  datetime NOT NULL ,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `trade_no_name` (`trade_no`, `name`) USING BTREE 
 )
 ENGINE=InnoDB
 ```
