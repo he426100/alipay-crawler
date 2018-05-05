@@ -123,6 +123,7 @@ class Alipay extends Command
      * @param string $start 开始时间
      * @param string $end 结束时间
      * @param string $tab
+     * @param string $acceptNames
      * @return [type] [description]
      */
     public function fetchAll($name, $start, $end, $tab = '', $acceptNames = '')
@@ -255,6 +256,7 @@ class Alipay extends Command
         $other = str_replace("\n", ' ', str_replace('"', '', $other));
         $time = str_replace("\n", ' ', str_replace('"', '', $time));
         $time = strtotime($time);
+        $balance = str_replace(',', '', $balance);
 
         return [
             'order_time' => $time,
