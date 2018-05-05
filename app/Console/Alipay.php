@@ -2,10 +2,9 @@
 
 namespace App\Console;
 
-use App\Model\Order;
+use App\Model\AlipayOrder;
 use League\Plates\Engine;
 use Psr\Log\LoggerInterface;
-use PHPMailer\PHPMailer\PHPMailer;
 use Psr\SimpleCache\CacheInterface;
 use Lib\Extend\Alipay as AlipayDriver;
 use Illuminate\Database\ConnectionInterface;
@@ -67,21 +66,21 @@ class Alipay extends Command
         $this->entry();
         while (true) {
             $hour = intval(date('H'));
-            if ($hour < 1 && !$this->cache->has('alipay_fetch_refreshed')) {
+            if ($hour < 1 && !$this->cache->has('alipay_fetch_refreshed_'.$this->settings['account'])) {
                 try {
                     $this->driver->refresh();
-                    $this->cache->set('alipay_fetch_refreshed', time(), 7200);
+                    $this->cache->set('alipay_fetch_refreshed_'.$this->settings['account'], time(), 7200);
                 } catch (\Exception $e) {
                     throw $e;
                 }
             }
             try {
                 $records = $this->driver->fetchByFundAccountDetail();//fetchFundAccountDetail
-                $this->cache->set('alipay_fetch_last_time', time(), 3600);
+                $this->saveRecords($records);
+                $this->cache->set('alipay_fetch_last_time_'.$this->settings['account'], time(), 3600);
             } catch (\Exception $e) {
                 throw $e;
             }
-            $this->saveRecords();
 
             sleep(15);
         }
@@ -143,30 +142,32 @@ class Alipay extends Command
     }
 
     /**
-     * 发送邮件
-     *
-     * @param string $to
-     * @param string $subject
-     * @param string $content
-     * @return void
+     * 爬取指定时间段的交易退款记录
+     * 
+     * @return [type] [description]
      */
-    public function mail($to, $subject, $content = '')
+    public function fetchAllRefund($start, $end)
     {
-        if (empty($to)) {
-            return
-            "\nEntered console command with params: \n".
-            "to= {$to}\n";
-        }
-        $app = app();
-        $mail = $app->resolve(PHPMailer::class);
+        $this->entry();
         try {
-            $mail->addAddress($to);     // Add a recipient
-            $mail->Subject = $subject;
-            $mail->Body    = $content;
-            $mail->send();
-            echo 'Message has been sent';
-        } catch (Exception $e) {
-            echo 'Message could not be sent. Mailer Error: ', $mail->ErrorInfo;
+            $records = $this->driver->fetchFirstRefundByFundAccountDetail($start, $end);
+            $this->saveRecords($records, ['交易退款']);
+            while (true) {
+                try {
+                    $records = $this->driver->fetchNextExpenseByFundAccountDetail();
+                } catch (\Exception $e) {
+                    $this->logger->error($e->getMessage());
+                    continue;
+                }
+                if ($records === false || empty($records)) {
+                    break;
+                }
+                $this->saveRecords($records, ['交易退款']);
+
+                sleep(5);
+            }
+        } catch (\Exception $e) {
+            throw $e;
         }
     }
 
@@ -217,17 +218,12 @@ class Alipay extends Command
             return false;
         }
         //检查支付宝订单号
-        if ($symbol == '+' && !preg_match('/^\d{32}$/', $tradeNo)) {
+        if (!preg_match('/^\d{28}$/', $tradeNo) && !preg_match('/^\d{32}$/', $tradeNo)) {
             //throw new \Exception('当前行非转账类型');
             $this->logger->error('formatAccount.tradeNo'.PHP_EOL.var_export($row, true));
             return false;
         }
-        if ($symbol == '-' && !preg_match('/^\d{28}$/', $tradeNo)) {
-            //throw new \Exception('当前行非转账类型');
-            $this->logger->error('formatAccount.tradeNo'.PHP_EOL.var_export($row, true));
-            return false;
-        }
-        if ($this->cache->has('order_'.$tradeNo)) {
+        if ($this->cache->has('order_'.$tradeNo.'_'.$name)) {
             return false;
         }
         //检查金额，比如不可为负数
@@ -281,7 +277,7 @@ class Alipay extends Command
             $this->logger->error('format.tradeNo'.PHP_EOL.var_export($row, true));
             return false;
         }
-        if ($this->cache->has('order_'.$tradeNo)) {
+        if ($this->cache->has('order_'.$tradeNo.'_'.$name)) {
             return false;
         }
         if ($status != '交易成功') {
@@ -320,13 +316,13 @@ class Alipay extends Command
      */
     protected function save($data)
     {
-        if ($this->db->table('order')->where('trade_no', $data['trade_no'])->selectRaw('count(*) number')->value('number') > 0) {
-            $this->cache->set('order_'.$data['trade_no'], time(), 3600);
+        if ($this->db->table('alipay_order')->where('trade_no', $data['trade_no'])->where('name', $data['name'])->selectRaw('count(*) number')->value('number') > 0) {
+            $this->cache->set('order_'.$data['trade_no'].'_'.$data['name'], time(), 3600);
             return false;
         }
         $data['alipay_account'] = $this->settings['account'];
         $this->logger->info(var_export($data, true));
-        return Order::create($data);
+        return AlipayOrder::create($data);
     }
 
     /**
