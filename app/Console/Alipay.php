@@ -61,8 +61,11 @@ class Alipay extends Command
      * 
      * @return [type] [description]
      */
-    public function fetchHome()
+    public function fetchHome($name = '转账', $tab = '收入', $acceptNames = '转账,收款')
     {
+        $tab = $this->getTabByName($name, $tab);
+        $acceptNames = $this->getAcceptNamesByName($name, $acceptNames);
+    
         $this->entry();
         while (true) {
             $hour = intval(date('H'));
@@ -75,14 +78,14 @@ class Alipay extends Command
                 }
             }
             try {
-                $records = $this->driver->fetchByFundAccountDetail();//fetchFundAccountDetail
-                $this->saveRecords($records);
+                $records = $this->driver->fetchByFundAccountDetail($tab);//fetchFundAccountDetail
+                $this->saveRecords($records, $acceptNames);
                 $this->cache->set('alipay_fetch_last_time_'.$this->settings['account'], time(), 3600);
             } catch (\Exception $e) {
                 throw $e;
             }
 
-            sleep(15);
+            sleep(10);
         }
     }
 
@@ -92,7 +95,7 @@ class Alipay extends Command
      * @param string $tradeNo
      * @return void
      */
-    public function query($tradeNo)
+    public function query($tradeNo, $acceptNames = ['转账', '收款', '交易'])
     {
         $this->entry();
         try {
@@ -103,7 +106,9 @@ class Alipay extends Command
         $_records = [];
         try {
             foreach ($records as $record) {
-                $_records[] = $this->formatAccount($record);
+                if (($_record = $this->formatAccount($record, $acceptNames)) !== false) {
+                    $_records[] = $_record;
+                }
             }
         } catch (\Exception $e) {
             throw $e;
@@ -112,16 +117,22 @@ class Alipay extends Command
     }
 
     /**
-     * 爬取指定时间段的交易（支出）记录
+     * 爬取指定时间段的交易记录
      * 
+     * @param string $name 账务类型
+     * @param string $start 开始时间
+     * @param string $end 结束时间
+     * @param string $tab
      * @return [type] [description]
      */
-    public function fetchAllExpense($start, $end)
+    public function fetchAll($name, $start, $end, $tab = '', $acceptNames = '')
     {
+        $tab = $this->getTabByName($name, $tab);
+        $acceptNames = $this->getAcceptNamesByName($name, $acceptNames);
         $this->entry();
         try {
-            $records = $this->driver->fetchFirstExpenseByFundAccountDetail($start, $end);
-            $this->saveRecords($records, ['交易'], '-', true);
+            $records = $this->driver->fetchFirstByFundAccountDetail($name, $tab, $start, $end);
+            $this->saveRecords($records, $acceptNames);
             while (true) {
                 try {
                     $records = $this->driver->fetchNextExpenseByFundAccountDetail();
@@ -132,7 +143,7 @@ class Alipay extends Command
                 if ($records === false || empty($records)) {
                     break;
                 }
-                $this->saveRecords($records, ['交易'], '-', true);
+                $this->saveRecords($records, $acceptNames);
 
                 sleep(5);
             }
@@ -142,33 +153,47 @@ class Alipay extends Command
     }
 
     /**
-     * 爬取指定时间段的交易退款记录
-     * 
-     * @return [type] [description]
+     * 通过账务类型获取tab
+     *
+     * @param string $name 账务类型
+     * @param string $tab
+     * @return string
      */
-    public function fetchAllRefund($start, $end)
+    protected function getTabByName($name, $tab = '')
     {
-        $this->entry();
-        try {
-            $records = $this->driver->fetchFirstRefundByFundAccountDetail($start, $end);
-            $this->saveRecords($records, ['交易退款']);
-            while (true) {
-                try {
-                    $records = $this->driver->fetchNextExpenseByFundAccountDetail();
-                } catch (\Exception $e) {
-                    $this->logger->error($e->getMessage());
-                    continue;
-                }
-                if ($records === false || empty($records)) {
-                    break;
-                }
-                $this->saveRecords($records, ['交易退款']);
-
-                sleep(5);
+        if (empty($tab)) {
+            if ($name == '交易') {
+                $tab = '支出';
+            } elseif ($name == '交易退款') {
+                $tab = '收入';
+            } else {
+                $tab = '全部';
             }
-        } catch (\Exception $e) {
-            throw $e;
         }
+        return $tab;
+    }
+
+    /**
+     * 通过账务类型获取可接受账务类型
+     *
+     * @param string $name 账务类型
+     * @param string $acceptNames
+     * @return array
+     */
+    protected function getAcceptNamesByName($name, $acceptNames = '')
+    {
+        if (empty($acceptNames)) {
+            $acceptNames = [];
+            if ($name != '全部') {
+                $acceptNames[] = $name;
+            }
+            if ($name == '转账') {
+                $acceptNames[] = '收款';
+            }
+        } else {
+            $acceptNames = $acceptNames == '全部' ? [] : explode(',', $acceptNames);
+        }
+        return $acceptNames;
     }
 
     /**
@@ -177,14 +202,14 @@ class Alipay extends Command
      * @param [type] $records
      * @return void
      */
-    protected function saveRecords($records, $acceptNames = ['转账', '收款'], $symbol = '+', $canNegative = false)
+    protected function saveRecords($records, $acceptNames = [])
     {
         if (empty($records)) {
             return false;
         }
         try {
             foreach ($records as $record) {
-                $data = $this->formatAccount($record, $acceptNames, $symbol, $canNegative);
+                $data = $this->formatAccount($record, $acceptNames);
                 if (is_array($data)) {
                     $this->save($data);
                 }
@@ -203,7 +228,7 @@ class Alipay extends Command
      * @param array $acceptNames 可接受的账务类型
      * @return void
      */
-    protected function formatAccount($row, $acceptNames = ['转账', '收款'], $symbol = '+', $canNegative = false)
+    protected function formatAccount($row, $acceptNames = [])
     {
         if (count($row) != 8) {
             //throw new \Exception('行数据格式不正确：'.PHP_EOL.var_export($row, true));
@@ -212,31 +237,20 @@ class Alipay extends Command
         }
         list($time, $tradeNo, $outerOrderSn, $other, $name, $amount, $balance) = $row;
         //检查账务类型
-        if (!in_array($name, $acceptNames)) {
-            //throw new \Exception('当前行非转账类型');
+        if (!empty($acceptNames) && !in_array($name, $acceptNames)) {
             $this->logger->error('formatAccount.name'.PHP_EOL.var_export($row, true));
             return false;
         }
         //检查支付宝订单号
         if (!preg_match('/^\d{28}$/', $tradeNo) && !preg_match('/^\d{32}$/', $tradeNo)) {
-            //throw new \Exception('当前行非转账类型');
             $this->logger->error('formatAccount.tradeNo'.PHP_EOL.var_export($row, true));
             return false;
         }
         if ($this->cache->has('order_'.$tradeNo.'_'.$name)) {
             return false;
         }
-        //检查金额，比如不可为负数
-        if (substr($amount, 0, 1) != $symbol) {
-            return false;
-        }
-        $amount = floatval(str_replace($symbol, '', $amount));
-        if (!$canNegative && $amount <= 0) {
-            return false;
-        }
-        if ($symbol == '-') {
-            $amount = bcmul($amount, -1, 2); 
-        }
+        //金额转数字（去掉符号）
+        $amount = floatval($amount);
         //其他
         $other = str_replace("\n", ' ', str_replace('"', '', $other));
         $time = str_replace("\n", ' ', str_replace('"', '', $time));
@@ -287,7 +301,8 @@ class Alipay extends Command
         if (substr($amount, 0, 2) != '+ ') {
             return false;
         }
-        $amount = floatval(str_replace('+ ', '', $amount));
+        //金额转数字（去掉符号）
+        $amount = floatval($amount);
         if ($amount <= 0) {
             return false;
         }

@@ -17,11 +17,14 @@ use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\WebDriverExpectedCondition;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Facebook\WebDriver\Exception\StaleElementReferenceException;
+use Facebook\WebDriver\Exception\NoSuchElementException;
 
 class Alipay extends CrawlerDriver
 {
     protected $config = [];
     protected $cookiePath = 'alipay_cookies_selenium';
+    protected $tabs = ['全部', '收入', '支出'];
+    protected $names = ['全部', '交易', '交易退款', '服务费', '提现', '充值', '批量付款到账户', '批量付款到银行卡', '转账'];
 
     public function __construct($config = array())
     {
@@ -63,11 +66,8 @@ class Alipay extends CrawlerDriver
         )->click();
         //输入账号密码，故意降低输入账号速度
         $input = $this->driver->findElement(WebDriverBy::id('J-input-user'));
-        $words = str_split($this->config['account'], 1);
-        foreach ($words as $word) {
-            $input->sendKeys($word);
-            usleep(150000);
-        }
+        $this->slowInput($input, $this->config['account']);
+
         $this->driver->findElement(WebDriverBy::id('password_rsainput'))
             ->sendKeys($this->config['password'])
             ->submit();
@@ -154,6 +154,7 @@ class Alipay extends CrawlerDriver
 
     /**
      * 抓取交易记录页面首页记录
+     * 
      * @return [type] [description]
      */
     public function fetchRecordsByAdvanced()
@@ -187,15 +188,20 @@ class Alipay extends CrawlerDriver
     }
 
     /**
-     * 抓取对账中心-收入-首页记录
+     * 抓取对账中心-首页记录（简易版）
      *
+     * @param integer $tabIndex
      * @return void
      */
-    public function fetchByFundAccountDetail()
+    public function fetchByFundAccountDetail($tab = '收入')
     {
-        //点击“收入tab”
+        //切换tab
         $tabs = $this->checkFundAccountDetailByTabs();
-        $tabs[1]->click();
+        $tabIndex = array_search($tab, $this->tabs);
+        if ($tabIndex === false) {
+            throw new \Exception('不支持的tab');
+        }
+        $tabs[$tabIndex]->click();
         //等待ajax加载数据
         $this->waitForAjax($this->driver);
         //抓取首页交易记录
@@ -205,7 +211,7 @@ class Alipay extends CrawlerDriver
     /**
      * 在对账中心页面输入支付宝订单号查询
      *
-     * @param [type] $tradeNo
+     * @param string $tradeNo
      * @return void
      */
     public function queryByFundAccountDetail($tradeNo)
@@ -229,13 +235,15 @@ class Alipay extends CrawlerDriver
     }
 
     /**
-     * 抓取指定日期段的第一页支出
+     * 抓取指定账务类型、日期段的首页交易记录
      *
+     * @param string $name 账务类型
+     * @param string $tab 全部|收入|支出
      * @param string $start 开始时间，如2018-04-01 00:00:00
      * @param string $end 结束时间，如2018-04-31 00:00:00
      * @return void
      */
-    public function fetchFirstExpenseByFundAccountDetail($start, $end)
+    public function fetchFirstByFundAccountDetail($name, $tab, $start, $end)
     {
         //点击最近30天
         $options = $this->checkFundAccountDetailByMoreQuery();
@@ -248,28 +256,36 @@ class Alipay extends CrawlerDriver
         $this->driver->findElement(WebDriverBy::cssSelector('.moreQueryTip___2CtRG'))->click();
         //点击账务类型后面的框框
         $this->driver->findElement(WebDriverBy::cssSelector('.ant-select-lg'))->click();
-        //选择账务类型为交易
+        //选择账务类型
         $selectors = $this->driver->findElements(WebDriverBy::cssSelector('.ant-select-dropdown-menu-item'));
         if (count($selectors) != 9) {
-            throw new \Exception('尝试更换账务类型为“交易”失败');
+            throw new \Exception('获取账务类型选项失败');
         }
-        $selectors[1]->click();
+        $selectorIndex = array_search($name, $this->names);
+        if ($selectorIndex === false) {
+            throw new \Exception('不支持的账务类型');
+        }
+        $selectors[$selectorIndex]->click();
         //点击搜索按钮
         $this->driver->findElement(WebDriverBy::cssSelector('.ant-btn.ant-btn-primary'))->click();
         //等待ajax加载数据
         $this->waitForAjax($this->driver);
-        //点击“支出tab”
+        //点击tab
         $tabs = $this->checkFundAccountDetailByTabs();
-        $tabs[2]->click();
+        $tabIndex = array_search($tab, $this->tabs);
+        if ($tabIndex === false) {
+            throw new \Exception('不支持的tab');
+        }
+        $tabs[$tabIndex]->click();
         try {
             $this->driver->wait(10)->until(
                 WebDriverExpectedCondition::elementTextIs(
                     WebDriverBy::cssSelector('.ant-tabs-tab-active'),
-                    '支出'
+                    $tab
                 )
             );
         } catch (TimeOutException $e) {
-            $this->log->error('Alipay.fetchFirstExpenseByFundAccountDetail.ant-tabs-tab-active!=支出');
+            $this->log->error('Alipay.fetchFirstExpenseByFundAccountDetail.ant-tabs-tab-active!='.$tab);
             throw $e;
         }
         //等待ajax加载数据
@@ -279,7 +295,7 @@ class Alipay extends CrawlerDriver
     }
 
     /**
-     * 抓取下一页支出
+     * 抓取下一页交易记录
      *
      * @return void
      */
@@ -296,56 +312,6 @@ class Alipay extends CrawlerDriver
             return false;
         }
         $this->waitForAjax($this->driver);
-        return $this->getTableByFundAccountDetail();
-    }
-
-    /**
-     * 抓取指定日期段的第一页交易退款
-     *
-     * @param string $start 开始时间，如2018-04-01 00:00:00
-     * @param string $end 结束时间，如2018-04-31 00:00:00
-     * @return void
-     */
-    public function fetchFirstRefundByFundAccountDetail($start, $end)
-    {
-        //点击最近30天
-        $options = $this->checkFundAccountDetailByMoreQuery();
-        //$options[3]->click();
-        //等待ajax加载数据
-        //$this->waitForAjax($this->driver);
-        //设置起止时间
-        $this->setTimeRange($start, $end);
-        //点击更多查询条件
-        $this->driver->findElement(WebDriverBy::cssSelector('.moreQueryTip___2CtRG'))->click();
-        //点击账务类型后面的框框
-        $this->driver->findElement(WebDriverBy::cssSelector('.ant-select-lg'))->click();
-        //选择账务类型为交易退款
-        $selectors = $this->driver->findElements(WebDriverBy::cssSelector('.ant-select-dropdown-menu-item'));
-        if (count($selectors) != 9) {
-            throw new \Exception('尝试更换账务类型为“交易退款”失败');
-        }
-        $selectors[2]->click();
-        //点击搜索按钮
-        $this->driver->findElement(WebDriverBy::cssSelector('.ant-btn.ant-btn-primary'))->click();
-        //等待ajax加载数据
-        $this->waitForAjax($this->driver);
-        //点击“收入tab”
-        $tabs = $this->checkFundAccountDetailByTabs();
-        $tabs[1]->click();
-        try {
-            $this->driver->wait(10)->until(
-                WebDriverExpectedCondition::elementTextIs(
-                    WebDriverBy::cssSelector('.ant-tabs-tab-active'),
-                    '收入'
-                )
-            );
-        } catch (TimeOutException $e) {
-            $this->log->error('Alipay.fetchFirstExpenseByFundAccountDetail.ant-tabs-tab-active!=收入');
-            throw $e;
-        }
-        //等待ajax加载数据
-        $this->waitForAjax($this->driver);
-        //抓取首页交易记录
         return $this->getTableByFundAccountDetail();
     }
 
@@ -469,8 +435,16 @@ class Alipay extends CrawlerDriver
                             $record[$col] = $spans[1]->getText();
                             break;
                         case 1:
-                            $span = $td->findElement(WebDriverBy::cssSelector('[data-clipboard-text]'));
-                            $record[$col] = $span->getAttribute('data-clipboard-text');
+                            $element = $td->findElement(WebDriverBy::cssSelector('[data-clipboard-text]'));
+                            $record[$col] = $element->getAttribute('data-clipboard-text');
+                            break;
+                        case 2:
+                            try {
+                                $element = $td->findElement(WebDriverBy::cssSelector('[data-clipboard-text]'));
+                                $record[$col] = $element->getAttribute('data-clipboard-text');
+                            } catch (NoSuchElementException $e) {
+                                $record[$col] = $td->getText();
+                            }
                             break;
                         default:
                             $record[$col] = $td->getText();

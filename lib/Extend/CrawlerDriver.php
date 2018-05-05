@@ -9,6 +9,7 @@ use Facebook\WebDriver\WebDriverBy;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Process\Process;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Facebook\WebDriver\Remote\RemoteWebElement;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 
 class CrawlerDriver
@@ -76,15 +77,43 @@ class CrawlerDriver
     {
         return $this->driver->navigate()->refresh();
     }
-
+    
+    /**
+     * 打开页面并存入历史记录
+     *
+     * @param string $url
+     * @return void
+     */
     protected function get($url)
     {
         $this->driver->get($url);
         $this->history[] = $url;
+        //只保留10个，目前没啥用，先这样写着
+        if (count($this->history) > 10) {
+            array_shift($this->history);
+        }
+    }
+
+    /**
+     * 延迟输入
+     *
+     * @param RemoteWebElement $input
+     * @param string $value
+     * @param integer $speed
+     * @return void
+     */
+    protected function slowInput(RemoteWebElement $input, $value, $speed = 150000)
+    {
+        $words = str_split($value, 1);
+        foreach ($words as $word) {
+            $input->sendKeys($word);
+            usleep($speed);
+        }
     }
 
     /**
      * 初始化cookies
+     * 
      * @return [type] [description]
      */
     protected function initCookies()
@@ -98,6 +127,7 @@ class CrawlerDriver
 
     /**
      * 保存cookies
+     * 
      * @return [type] [description]
      */
     protected function saveCookies()
@@ -112,6 +142,7 @@ class CrawlerDriver
 
     /**
      * 删除cookies
+     * 
      * @return [type] [description]
      */
     protected function removeCookies()
