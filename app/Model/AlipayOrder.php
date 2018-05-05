@@ -1,9 +1,9 @@
 <?php namespace App\Model;
 
-class Order extends Model
+class AlipayOrder extends Model
 {
 
-    protected $table = 'order';
+    protected $table = 'alipay_order';
     
     public $timestamps = true;
     /**
