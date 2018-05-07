@@ -11,6 +11,7 @@ use Symfony\Component\Process\Process;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\RemoteWebElement;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
+use Lib\Extend\Douli;
 
 class CrawlerDriver
 {
@@ -78,6 +79,40 @@ class CrawlerDriver
         return $this->driver->navigate()->refresh();
     }
     
+    /**
+     * 识别验证码
+     *
+     * @param RemoteWebElement $element 验证码图片元素
+     * @param string $typeId 验证码类型
+     * @param string $path 验证码保存路径
+     * @return void
+     */
+    public function recognitionCaptcha(RemoteWebElement $element, $typeId = '1000', $path = '')
+    {
+        $img = $this->getCaptchaImg($element, $path);
+        $base64 = base64_encode(file_get_contents($img));
+        $douli = new Douli();
+        return $douli->checkCode($base64, $typeId);
+    }
+
+    /**
+     * 截图验证码图片
+     *
+     * @param RemoteWebElement $element
+     * @param string $path
+     * @return string
+     */
+    public function getCaptchaImg(RemoteWebElement $element, $path = '')
+    {
+        if (empty($path)) {
+            $path = STORAGE_PATH.'screenshot'.DS.md5($this->driver->getCurrentURL().time()).'.png';
+        }
+        $this->driver->manage()->window()->maximize();//将浏览器最大化
+        $this->driver->takeScreenshot($path);//截取当前网页，该网页有我们需要的验证码
+        generateVcodeIMG($element->getLocation(), $element->getSize(), $path);
+        return $path;
+    }
+
     /**
      * 打开页面并存入历史记录
      *
