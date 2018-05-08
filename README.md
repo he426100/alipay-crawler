@@ -41,6 +41,17 @@ php cli.php alipay fetchAll name="全部" start="2018-04-01 00:00:00" end="2018-
 php cli.php alipay query tradeNo=2018xxx
 ```
 
+- 其他参数
+
+指定支付宝账号密码
+```cmd
+alipay_account=xxx alipay_password=xxx
+```
+指定爬虫服务端口（多个爬虫同时运行，selenium-server-standalone-#.jar可以使用-port指定端口号）
+```cmd
+port=4444
+```
+
 ### 说明
 
 - 本项目未经过严格测试，请谨慎用于生产环境
