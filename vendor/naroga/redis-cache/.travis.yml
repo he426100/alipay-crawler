@@ -1,0 +1,14 @@
+language: php
+php:
+    - 5.3
+    - 5.4
+    - 5.5
+    - 5.6
+    - 7.0
+    - 7.1
+install:
+    - composer install
+script:
+    - php vendor/bin/phpunit --bootstrap vendor/autoload.php -c ./phpunit.xml ./Tests
+after_script:
+    - php vendor/bin/coveralls -v
