@@ -28,13 +28,14 @@ class Alipay extends CrawlerDriver
 
     public function __construct($config = array())
     {
-        parent::__construct();
+        parent::__construct($config);
         //加载配置
         $resolver = new OptionsResolver();
         $resolver->setDefaults(array(
             'account' => '',
             'password' => '',
             'to' => '',
+            'port' => '4444',
         ));
         $this->config = $resolver->resolve($config);
         $this->cookiePath = $this->cookiePath.'_'.$this->config['account'];
@@ -199,7 +200,7 @@ class Alipay extends CrawlerDriver
         $tabs = $this->checkFundAccountDetailByTabs();
         $tabIndex = array_search($tab, $this->tabs);
         if ($tabIndex === false) {
-            throw new \Exception('不支持的tab');
+            throw new \Exception('不支持的tab：'.$tab);
         }
         $tabs[$tabIndex]->click();
         //等待ajax加载数据
@@ -274,7 +275,7 @@ class Alipay extends CrawlerDriver
         $tabs = $this->checkFundAccountDetailByTabs();
         $tabIndex = array_search($tab, $this->tabs);
         if ($tabIndex === false) {
-            throw new \Exception('不支持的tab');
+            throw new \Exception('不支持的tab：'.$tab);
         }
         $tabs[$tabIndex]->click();
         try {

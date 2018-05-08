@@ -30,6 +30,9 @@ class Alipay extends Command
         } else {
             $settings = $app->getConfig('settings.alipay');
         }
+        if (isset($argv['port'])) {
+            $settings['port'] = $argv['port'];
+        }
         $this->settings = $settings;
         $this->driver = new AlipayDriver($settings);
         $this->cache = $app->resolve(CacheInterface::class);
@@ -57,12 +60,15 @@ class Alipay extends Command
     }
 
     /**
-     * 爬取首页转账（收入）记录
+     * 爬取首页转账记录
      * 
      * @return [type] [description]
      */
     public function fetchHome($name = '转账', $tab = '收入', $acceptNames = '转账,收款')
     {
+        if ($name == 'all') {
+            $name = '全部';
+        }
         $tab = $this->getTabByName($name, $tab);
         $acceptNames = $this->getAcceptNamesByName($name, $acceptNames);
     
@@ -128,6 +134,9 @@ class Alipay extends Command
      */
     public function fetchAll($name, $start, $end, $tab = '', $acceptNames = '')
     {
+        if ($name == 'all') {
+            $name = '全部';
+        }
         $tab = $this->getTabByName($name, $tab);
         $acceptNames = $this->getAcceptNamesByName($name, $acceptNames);
         $this->entry();
@@ -171,6 +180,9 @@ class Alipay extends Command
                 $tab = '全部';
             }
         }
+        if ($tab == 'all') {
+            $tab = '全部';
+        }
         return $tab;
     }
 
@@ -192,7 +204,7 @@ class Alipay extends Command
                 $acceptNames[] = '收款';
             }
         } else {
-            $acceptNames = $acceptNames == '全部' ? [] : explode(',', $acceptNames);
+            $acceptNames = $acceptNames == '全部' || $acceptNames == 'all' ? [] : explode(',', $acceptNames);
         }
         return $acceptNames;
     }
@@ -239,11 +251,11 @@ class Alipay extends Command
         list($time, $tradeNo, $outerOrderSn, $other, $name, $amount, $balance) = $row;
         //检查账务类型
         if (!empty($acceptNames) && !in_array($name, $acceptNames)) {
-            $this->logger->error('formatAccount.name'.PHP_EOL.var_export($row, true));
+            $this->logger->error('formatAccount.name'.PHP_EOL.var_export($acceptNames, true).PHP_EOL.var_export($row, true));
             return false;
         }
         //检查支付宝订单号
-        if (!preg_match('/^\d{28}$/', $tradeNo) && !preg_match('/^\d{32}$/', $tradeNo)) {
+        if (!preg_match('/^\d{16,}$/', $tradeNo)) {
             $this->logger->error('formatAccount.tradeNo'.PHP_EOL.var_export($row, true));
             return false;
         }

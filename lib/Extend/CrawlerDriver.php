@@ -29,7 +29,9 @@ class CrawlerDriver
         $this->cache = $app->resolve(CacheInterface::class);
         $this->log = $app->resolve(LoggerInterface::class);
         // start Chrome with 5 second timeout
-        $host = 'http://127.0.0.1:4444/wd/hub'; // this is the default
+        $port = isset($config['port']) ? $config['port'] : '4444';
+        $host = 'http://127.0.0.1:'.$port.'/wd/hub'; // this is the default
+        $this->log->debug('start '.$port);
         $capabilities = DesiredCapabilities::chrome();
         $this->driver = RemoteWebDriver::create($host, $capabilities, 5000);
     }
