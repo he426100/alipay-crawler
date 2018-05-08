@@ -1,13 +1,29 @@
 # alipay-crawler
 
 
-1. 功能说明
+### 功能说明
 
 - 无限循环抓取首页记录
 - 指定时间段抓取所有记录
+- 查询指定订单号
 - 支持多个支付宝账号
 
-2. 使用方法
+### 安装
+
+```cmd
+git clone git@github.com:he426100/alipay-crawler.git
+```
+
+### 使用方法
+
+从 [seleniumhq.org](https://www.seleniumhq.org/download/) 下载 selenium-server
+#### 启动服务
+
+```cmd
+java -jar selenium-server-standalone-#.jar
+```
+
+#### 启动爬虫
 
 - 无限循环爬取账务明细首页交易记录（可用于实现个人收款）
 ```cmd
@@ -25,12 +41,12 @@ php cli.php alipay fetchAll name="全部" start="2018-04-01 00:00:00" end="2018-
 php cli.php alipay query tradeNo=2018xxx
 ```
 
-3. 说明
+### 说明
 
 - 本项目未经过严格测试，请谨慎用于生产环境
 - selenium-ide和katalon都可以录制，katalon录制出来后无法设置支付宝账务明细页面的时间段，我是先分别用两个插件录制，然后再用selenium-ide的部分步骤替换katalon，再用katalon导出php代码
 
-4. 数据库
+### 数据库
 ```sql
 CREATE TABLE `xx_alipay_order` (
     `id`  int(11) NOT NULL AUTO_INCREMENT ,
@@ -54,7 +70,7 @@ CREATE TABLE `xx_alipay_order` (
 ENGINE=InnoDB
 ```
 
-5. 参考
+### 参考
     
 - [slim3-skeleton](https://github.com/jupitern/slim3-skeleton)
 - [https://github.com/facebook/php-webdriver](https://github.com/facebook/php-webdriver)
