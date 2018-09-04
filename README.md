@@ -22,6 +22,7 @@ git clone git@github.com:he426100/alipay-crawler.git
 ```cmd
 java -jar selenium-server-standalone-#.jar
 ```
+补充：需要把chromedriver.exe和selenium-server-standalone-#.jar放在同一个目录下
 
 #### 启动爬虫
 
